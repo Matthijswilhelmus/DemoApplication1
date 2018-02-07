@@ -2,6 +2,7 @@ package nl.avans.ivh11.DemoApplication.controller;
 
 import nl.avans.ivh11.DemoApplication.domain.Product;
 import nl.avans.ivh11.DemoApplication.repository.ProductRepository;
+import nl.avans.ivh11.DemoApplication.service.ProductService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +30,11 @@ public class ProductController {
     private final String VIEW_READ_PRODUCT = "views/product/read";
 
     @Autowired
-    private final ProductRepository productRepository;
+    private final ProductService productService;
 
     // Constructor with Dependency Injection
-    public ProductController(ProductRepository productRepository) {
-        this.productRepository = productRepository;
+    public ProductController(ProductService productService) {
+        this.productService = productService;
     }
 
     @GetMapping
@@ -43,7 +44,7 @@ public class ProductController {
             Model model) {
 
         logger.debug("listProducts called.");
-        Iterable<Product> products = productRepository.findAll();
+        Iterable<Product> products = productService.getProducts();
 
         model.addAttribute("category", category);
         model.addAttribute("size", size);
@@ -78,12 +79,12 @@ public class ProductController {
         // ToDo: volgende acties naar de servicelaag verplaatsen.
         //
 
-        product = this.productRepository.save(product);
+        product = this.productService.createProduct(product);
 
 //        redirect.addFlashAttribute("globalMessage", "Successfully created a new message");
 //        return new ModelAndView("redirect:/product/{product.id}", "product.id", product.getId());
 
-        products = (ArrayList<Product>) this.productRepository.findAll();
+        products = (ArrayList<Product>) this.productService.getProducts();
         return new ModelAndView(VIEW_LIST_PRODUCTS, "products", products);
     }
 
