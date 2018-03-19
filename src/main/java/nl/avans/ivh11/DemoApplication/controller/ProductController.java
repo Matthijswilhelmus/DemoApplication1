@@ -1,15 +1,18 @@
 package nl.avans.ivh11.DemoApplication.controller;
 
 import nl.avans.ivh11.DemoApplication.domain.*;
+import nl.avans.ivh11.DemoApplication.logging.MyExecutionTime;
 import nl.avans.ivh11.DemoApplication.repository.OrderOptionRepository;
 import nl.avans.ivh11.DemoApplication.repository.OrderRepository;
 import nl.avans.ivh11.DemoApplication.repository.ProductCatalogRepository;
 import nl.avans.ivh11.DemoApplication.repository.ProductRepository;
 import nl.avans.ivh11.DemoApplication.service.ProductService;
+import nl.avans.ivh11.DemoApplication.service.ProductTransactionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
@@ -36,19 +39,16 @@ public class ProductController {
 
     @Autowired
     private final ProductService productService;
-    private ProductCatalogRepository productCatalogRepository;
-    private OrderRepository orderRepository;
-    private OrderOptionRepository orderOptionRepository;
+    private final ProductTransactionService productTransactionService;
+
 
     // Constructor with Dependency Injection
     public ProductController(
             ProductService service,
-            ProductCatalogRepository productCatalogRepository,
-            OrderRepository orderRepository
+            ProductTransactionService productTransactionService
     ) {
         this.productService = service;
-        this.productCatalogRepository = productCatalogRepository;
-        this.orderRepository = orderRepository;
+        this.productTransactionService = productTransactionService;
     }
 
     @Transactional
@@ -58,7 +58,7 @@ public class ProductController {
         logger.debug("addSomeMoreProducts called.");
 
         // createProductCatalogAndProducts();
-        createOrder();
+        productTransactionService.createOrder();
 
         Iterable<Product> products = productService.getProducts();
 
@@ -66,6 +66,7 @@ public class ProductController {
     }
 
     @GetMapping
+    @MyExecutionTime //logging aspect
     public String listProducts(
             @RequestParam(value = "category", required = false, defaultValue = "all") String category,
             @RequestParam(value = "size", required = false, defaultValue = "10") String size,
@@ -122,65 +123,9 @@ public class ProductController {
     @GetMapping(params = "form")
     public String createForm(@ModelAttribute Product product) {
 
-        createOrder();
-        decorateOrder();
+        productTransactionService.createOrder();
+        //decorateOrder();
 
         return "product/form";
-    }
-
-
-
-    /**
-     *
-     *
-     */
-    public void createProductCatalogAndProducts() {
-
-        // build product catalog and two products
-        ProductCatalog productCatalog = new ProductCatalog();
-
-        // right productCatalog: without id; left productCatalog: with id
-        // (needed because of autoincrement)
-        productCatalog = productCatalogRepository.save(productCatalog);
-
-        Product prod1 = new Product("Schroefje", "Zakje schroefjes", 2);
-        Product prod2 = new Product("Moertje", "Beschrijving van een moertje", 1);
-
-        // add two products
-        productCatalog.add(prod1, 1);
-        productCatalog.add(prod2, 3);
-    }
-    private void decorateOrder() {
-        Optional<Order> Order  = Optional.ofNullable(orderRepository.findOne(1L));  //.findById(4L);
-        OrderOption decoratedOrder1 = new OrderOption("wrapping paper", 7, Order.get());
-        orderOptionRepository.save(decoratedOrder1);
-        OrderOption decoratedOrder2 = new OrderOption("nice box", 5, decoratedOrder1);
-        orderOptionRepository.save(decoratedOrder2);
-        OrderOption decoratedOrder3 = new OrderOption("fast delivery", 12, decoratedOrder2);
-        orderOptionRepository.save(decoratedOrder3);
-        System.out.println("***** content of the order: " + decoratedOrder3);
-        System.out.println("***** price of the order: " + decoratedOrder3.price());
-    }
-
-
-    /**
-     *
-     *
-     */
-    public void createOrder() {
-
-        // get the productCatalog
-        ProductCatalog productCatalog = productCatalogRepository.findOne(1L);
-
-        // "find" a product in the catalog and add it to the order
-        Product prod = productCatalog.find(2L);
-
-        // make a copy of the product (the copy has no id yet)
-        // why a copy is made?
-        Product prodCopy = new Product(prod);
-
-        Order order = new Order();
-        order = orderRepository.save(order);
-        order.add(prodCopy);
     }
 }
